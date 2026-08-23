@@ -53,6 +53,7 @@ export interface DeviceSettings {
   audioOutputId: string;
   noiseSuppression: boolean;
   echoCancellation: boolean;
+  micGain: number; // 0-10, boost manual de ganho do microfone (5 = neutro/1x)
 }
 
 export interface PeerConnectionState {

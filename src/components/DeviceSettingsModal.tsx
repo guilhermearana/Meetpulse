@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mic, Video, Volume2, CheckCircle2, Sliders } from 'lucide-react';
+import { X, Mic, Video, Volume2, CheckCircle2, Sliders, Volume1 } from 'lucide-react';
 import { DeviceSettings } from '../types';
 
 interface DeviceSettingsModalProps {
@@ -8,6 +8,7 @@ interface DeviceSettingsModalProps {
   videoDevices: MediaDeviceInfo[];
   audioOutputDevices: MediaDeviceInfo[];
   onUpdateSettings: (settings: Partial<DeviceSettings>) => void;
+  onMicGainChange: (gain: number) => void;
   onClose: () => void;
 }
 
@@ -17,6 +18,7 @@ export const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
   videoDevices,
   audioOutputDevices,
   onUpdateSettings,
+  onMicGainChange,
   onClose,
 }) => {
   const [testPlaying, setTestPlaying] = useState<boolean>(false);
@@ -88,6 +90,28 @@ export const DeviceSettingsModal: React.FC<DeviceSettingsModalProps> = ({
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Ganho do Microfone */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-300 flex items-center gap-1.5">
+                <Volume1 className="w-4 h-4 text-blue-400" />
+                <span>Ganho do Microfone</span>
+              </label>
+              <span className="text-xs font-mono text-blue-400">{settings.micGain ?? 5}/10</span>
+            </div>
+            <input
+              id="mic-gain-slider"
+              type="range"
+              min={0}
+              max={10}
+              step={1}
+              value={settings.micGain ?? 5}
+              onChange={(e) => onMicGainChange(Number(e.target.value))}
+              className="w-full accent-blue-600 cursor-pointer"
+            />
+            <div className="text-[11px] text-gray-400">Aumente se o microfone estiver soando baixo (útil em celulares Android)</div>
           </div>
 
           {/* Câmera */}

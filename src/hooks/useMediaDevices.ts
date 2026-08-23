@@ -25,7 +25,54 @@ export function useMediaDevices() {
     audioOutputId: '',
     noiseSuppression: true,
     echoCancellation: true,
+    micGain: 5, // 0-10, onde 5 = ganho neutro (1x)
   });
+
+  // Web Audio API: usado para aplicar boost manual de ganho no microfone,
+  // já que o autoGainControl do navegador nem sempre normaliza bem
+  // (comum em Chrome Android com mic embutido).
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+
+  // Converte a escala 0-10 (UI) para um multiplicador de ganho real.
+  // 5 = 1x (neutro), 0 = mudo, 10 = 3x de amplificação.
+  const gainScaleToMultiplier = (scale: number) => {
+    const clamped = Math.max(0, Math.min(10, scale));
+    if (clamped <= 5) return clamped / 5; // 0..5 -> 0..1x
+    return 1 + ((clamped - 5) / 5) * 2; // 5..10 -> 1x..3x
+  };
+
+  // Aplica o GainNode numa audio track crua, retornando uma nova track
+  // já processada (a track original é mantida rodando por baixo, o
+  // navegador cuida do roteamento). Reaproveita o mesmo AudioContext.
+  const applyMicGain = useCallback((audioTrack: MediaStreamTrack, gainScale: number): MediaStreamTrack => {
+    try {
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        audioContextRef.current = new AudioContext();
+      }
+      const ctx = audioContextRef.current;
+      const source = ctx.createMediaStreamSource(new MediaStream([audioTrack]));
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = gainScaleToMultiplier(gainScale);
+      const destination = ctx.createMediaStreamDestination();
+      source.connect(gainNode).connect(destination);
+      gainNodeRef.current = gainNode;
+      const processedTrack = destination.stream.getAudioTracks()[0];
+      processedTrack.enabled = audioTrack.enabled;
+      return processedTrack;
+    } catch (err) {
+      console.warn('[useMediaDevices] Error applying mic gain, using raw track:', err);
+      return audioTrack;
+    }
+  }, []);
+
+  // Ajusta o ganho em tempo real (0-10), sem precisar reabrir o microfone.
+  const setMicGain = useCallback((gainScale: number) => {
+    setSettings((prev) => ({ ...prev, micGain: gainScale }));
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = gainScaleToMultiplier(gainScale);
+    }
+  }, []);
 
   const localStreamRef = useRef<MediaStream | null>(null);
   localStreamRef.current = localStream;
@@ -188,6 +235,17 @@ export function useMediaDevices() {
 
         if (!stream) {
           throw new Error('Não foi possível obter o fluxo de mídia.');
+        }
+
+        // Aplica o boost manual de ganho na track de áudio (substitui a
+        // track crua pela processada via GainNode, mantendo o vídeo intacto)
+        const rawAudioTrack = stream.getAudioTracks()[0];
+        if (rawAudioTrack) {
+          const gainedTrack = applyMicGain(rawAudioTrack, settingsRef.current.micGain ?? 5);
+          if (gainedTrack !== rawAudioTrack) {
+            stream.removeTrack(rawAudioTrack);
+            stream.addTrack(gainedTrack);
+          }
         }
 
         const audioMuted = options?.startAudioMuted !== undefined ? options.startAudioMuted : isAudioMutedRef.current;
@@ -532,6 +590,11 @@ export function useMediaDevices() {
       setScreenStream(null);
     }
     setIsScreenSharing(false);
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+      gainNodeRef.current = null;
+    }
   }, [screenStream]);
 
   useEffect(() => {
@@ -556,6 +619,7 @@ export function useMediaDevices() {
     isMobileDevice,
     settings,
     setSettings,
+    setMicGain,
     startUserMedia,
     switchAudioDevice,
     switchVideoDevice,

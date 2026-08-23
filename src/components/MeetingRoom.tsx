@@ -90,6 +90,7 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
     isMobileDevice,
     settings,
     setSettings,
+    setMicGain,
     startUserMedia,
     switchAudioDevice,
     switchVideoDevice,
@@ -775,6 +776,7 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
               }
             }
           }}
+          onMicGainChange={(gain) => setMicGain(gain)}
           onClose={() => setShowSettingsModal(false)}
         />
       )}
