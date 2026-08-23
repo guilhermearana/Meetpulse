@@ -1,0 +1,11 @@
+{
+  "name": "MeetPulse - Plataforma de Chamadas de Vídeo",
+  "description": "Plataforma moderna de videoconferências em tempo real com WebRTC, áudio, vídeo, chat, compartilhamento de tela, controle de sala e convites.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
