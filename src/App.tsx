@@ -106,14 +106,21 @@ export default function App() {
       setErrorMessage(data.message || 'Não foi possível entrar na reunião.');
     };
 
+    const handleConnectError = () => {
+      setViewState('home');
+      setErrorMessage('Não foi possível conectar ao servidor. Verifique sua conexão ou tente novamente em instantes.');
+    };
+
     socket.on('room:joined', handleRoomJoined);
     socket.on('waiting_room:status', handleWaitingRoomStatus);
     socket.on('waiting_room:rejected', handleWaitingRoomRejected);
     socket.on('room:error', handleRoomError);
+    socket.on('connect_error', handleConnectError);
 
     return () => {
       socket.off('room:joined', handleRoomJoined);
       socket.off('waiting_room:status', handleWaitingRoomStatus);
+      socket.off('connect_error', handleConnectError);
       socket.off('waiting_room:rejected', handleWaitingRoomRejected);
       socket.off('room:error', handleRoomError);
     };

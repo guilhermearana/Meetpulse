@@ -4,8 +4,10 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    // In dev & prod, connect to current host origin
-    socket = io(window.location.origin, {
+    // Usa VITE_SOCKET_URL (backend real, ex: Railway) se definida;
+    // caso contrário cai no origin atual (útil em dev local, onde front e back rodam juntos)
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+    socket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
