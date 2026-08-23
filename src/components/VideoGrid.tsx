@@ -44,7 +44,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     };
 
     return (
-      <div id="video-grid-spotlight" className="w-full h-full p-2 sm:p-4 flex flex-col lg:flex-row gap-3 overflow-hidden">
+      <div id="video-grid-spotlight" className="w-full h-full p-1.5 sm:p-4 flex flex-col lg:flex-row gap-2 sm:gap-3 overflow-hidden">
         {/* Main Stage (Large) */}
         <motion.div
           layout
@@ -53,7 +53,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="flex-1 h-full min-h-[300px] rounded-2xl overflow-hidden shadow-2xl relative"
+          className="flex-1 h-full min-h-0 rounded-2xl overflow-hidden shadow-2xl relative"
         >
           <VideoTile
             participant={spotlightParticipant}
@@ -66,9 +66,9 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
           />
         </motion.div>
 
-        {/* Secondary Strip (Side or Bottom on Mobile) */}
+        {/* Secondary Strip (Horizontal scroll on mobile, vertical sidebar on desktop) */}
         {secondaryParticipants.length > 0 && (
-          <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto lg:w-64 xl:w-72 shrink-0 py-1 lg:py-0">
+          <div className="flex lg:flex-col gap-2 sm:gap-3 overflow-x-auto lg:overflow-y-auto lg:w-64 xl:w-72 shrink-0 py-0.5 lg:py-0 max-h-[30vh] lg:max-h-none">
             <AnimatePresence mode="popLayout">
               {secondaryParticipants.map((p) => (
                 <motion.div
@@ -78,7 +78,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.7, x: 20, transition: { duration: 0.2 } }}
                   transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-                  className="w-44 h-32 lg:w-full lg:h-44 shrink-0 rounded-2xl overflow-hidden"
+                  className="w-36 h-24 sm:w-44 sm:h-32 lg:w-full lg:h-44 shrink-0 rounded-xl sm:rounded-2xl overflow-hidden"
                 >
                   <VideoTile
                     participant={p}
@@ -101,24 +101,24 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
   // Standard Grid Mode (Dynamic column/row calculation)
   const count = allParticipants.length;
 
-  let gridColsClass = 'grid-cols-1';
+  let gridClasses = 'grid-cols-1 grid-rows-1';
   if (count === 2) {
-    gridColsClass = 'grid-cols-1 md:grid-cols-2';
+    gridClasses = 'grid-cols-1 grid-rows-2 sm:grid-cols-2 sm:grid-rows-1';
   } else if (count === 3 || count === 4) {
-    gridColsClass = 'grid-cols-1 sm:grid-cols-2';
+    gridClasses = 'grid-cols-2 grid-rows-2';
   } else if (count >= 5 && count <= 6) {
-    gridColsClass = 'grid-cols-2 lg:grid-cols-3';
+    gridClasses = 'grid-cols-2 sm:grid-cols-3 auto-rows-fr';
   } else if (count > 6) {
-    gridColsClass = 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+    gridClasses = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 auto-rows-fr';
   }
 
   return (
     <div
       id="video-grid-container"
-      className={`w-full h-full p-2 sm:p-4 grid ${gridColsClass} gap-3 auto-rows-fr overflow-y-auto`}
+      className={`w-full h-full p-1.5 sm:p-4 grid ${gridClasses} gap-2 sm:gap-3 overflow-y-auto`}
     >
       <AnimatePresence mode="popLayout">
-        {allParticipants.map((p, index) => {
+        {allParticipants.map((p) => {
           const isSelf = p.socketId === selfParticipant.socketId;
           const stream = isSelf ? localStream : remoteStreams.get(p.socketId) || null;
 
@@ -134,7 +134,7 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
                 opacity: { duration: 0.25 },
                 scale: { type: 'spring', stiffness: 350, damping: 25 },
               }}
-              className="w-full h-full min-h-[220px] max-h-[85vh] rounded-2xl overflow-hidden"
+              className="w-full h-full min-h-0 rounded-xl sm:rounded-2xl overflow-hidden"
             >
               <VideoTile
                 participant={p}

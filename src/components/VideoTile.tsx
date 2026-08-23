@@ -189,20 +189,20 @@ export const VideoTile: React.FC<VideoTileProps> = ({
         </div>
       )}
 
-      {/* Top action buttons on hover */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-20">
+      {/* Top action buttons (visible on mobile touch and desktop hover) */}
+      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-150 z-20">
         {/* Tile Fullscreen Button */}
         <button
           id={`tile-fullscreen-btn-${participant.socketId}`}
           onClick={handleToggleTileFullscreen}
           title={isTileFullscreen ? 'Sair da tela cheia do vídeo' : 'Expandir vídeo em tela cheia'}
-          className={`p-2 rounded-xl backdrop-blur-md border transition-all ${
+          className={`p-1.5 sm:p-2 rounded-xl backdrop-blur-md border transition-all ${
             isTileFullscreen
               ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30'
               : 'bg-black/60 text-gray-300 hover:text-white border-white/10 hover:bg-white/10'
           }`}
         >
-          {isTileFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          {isTileFullscreen ? <Minimize className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Maximize className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </button>
 
         {/* Pin / Spotlight Button */}
@@ -210,13 +210,13 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           id={`pin-btn-${participant.socketId}`}
           onClick={() => onTogglePin(participant.socketId)}
           title={isPinned ? 'Desafixar' : 'Fixar participante'}
-          className={`p-2 rounded-xl backdrop-blur-md border transition-all ${
+          className={`p-1.5 sm:p-2 rounded-xl backdrop-blur-md border transition-all ${
             isPinned
               ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30'
               : 'bg-black/60 text-gray-300 hover:text-white border-white/10 hover:bg-white/10'
           }`}
         >
-          {isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+          {isPinned ? <PinOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Pin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
         </button>
 
         {/* Remote Volume slider trigger */}

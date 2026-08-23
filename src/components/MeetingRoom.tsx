@@ -42,6 +42,7 @@ interface MeetingRoomProps {
   initialParticipants: Participant[];
   initialMessages: ChatMessage[];
   initialWaitingUsers: WaitingUser[];
+  initialStream?: MediaStream | null;
   onLeave: () => void;
 }
 
@@ -51,6 +52,7 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
   initialParticipants,
   initialMessages,
   initialWaitingUsers,
+  initialStream,
   onLeave,
 }) => {
   const [room, setRoom] = useState<RoomInfo>(initialRoom);
@@ -159,10 +161,11 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
       });
     });
 
-    // Start local camera/mic media
+    // Start or seamlessly reuse local camera/mic media
     startUserMedia({
       startAudioMuted: selfUser.audioMuted,
       startVideoMuted: selfUser.videoMuted,
+      existingStream: initialStream,
     }).then((stream) => {
       if (stream) {
         rtc.setLocalStream(stream);

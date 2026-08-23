@@ -96,7 +96,7 @@ async function startServer() {
     let currentUser: Participant | null = null;
 
     // 1. Create room
-    socket.on('room:create', (data: { roomId: string; roomName?: string; user: { id: string; name: string; avatarColor?: string }; isPrivate?: boolean }) => {
+    socket.on('room:create', (data: { roomId: string; roomName?: string; user: { id: string; name: string; avatarColor?: string; audioMuted?: boolean; videoMuted?: boolean }; isPrivate?: boolean }) => {
       const roomId = data.roomId.toLowerCase().trim();
       const hostUser: Participant = {
         socketId: socket.id,
@@ -104,8 +104,8 @@ async function startServer() {
         name: data.user.name || 'Organizador',
         avatarColor: data.user.avatarColor || '#3B82F6',
         isHost: true,
-        audioMuted: false,
-        videoMuted: false,
+        audioMuted: !!data.user.audioMuted,
+        videoMuted: !!data.user.videoMuted,
         isScreenSharing: false,
         isHandRaised: false,
         volumeLevel: 0,

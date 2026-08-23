@@ -71,17 +71,46 @@ export function useMediaDevices() {
       startVideoMuted?: boolean;
       echoCancellation?: boolean;
       noiseSuppression?: boolean;
+      existingStream?: MediaStream | null;
     }) => {
       try {
         setPermissionError(null);
 
-        // Stop any previous tracks
-        if (localStreamRef.current) {
+        // 1. If an existing live stream is provided (e.g. from HomeView preview), reuse it seamlessly
+        if (
+          options?.existingStream &&
+          options.existingStream.active &&
+          options.existingStream.getTracks().some((t) => t.readyState === 'live')
+        ) {
+          const stream = options.existingStream;
+          const audioMuted = options?.startAudioMuted !== undefined ? options.startAudioMuted : isAudioMutedRef.current;
+          const videoMuted = options?.startVideoMuted !== undefined ? options.startVideoMuted : isVideoMutedRef.current;
+
+          stream.getAudioTracks().forEach((track) => {
+            track.enabled = !audioMuted;
+          });
+          setIsAudioMuted(audioMuted);
+
+          stream.getVideoTracks().forEach((track) => {
+            track.enabled = !videoMuted;
+          });
+          setIsVideoMuted(videoMuted);
+
+          setLocalStream(stream);
+          localStreamRef.current = stream;
+          setPermissionGranted(true);
+          await refreshDevices();
+          return stream;
+        }
+
+        // Stop any previous local tracks
+        if (localStreamRef.current && localStreamRef.current !== options?.existingStream) {
           localStreamRef.current.getTracks().forEach((t) => t.stop());
         }
 
         const chosenFacing = options?.facingMode || facingModeRef.current || 'user';
         setFacingMode(chosenFacing);
+        facingModeRef.current = chosenFacing;
 
         const audioConstraints: MediaTrackConstraints | boolean = options?.audioInputId
           ? {
@@ -89,22 +118,20 @@ export function useMediaDevices() {
               echoCancellation: options?.echoCancellation ?? settingsRef.current.echoCancellation ?? true,
               noiseSuppression: options?.noiseSuppression ?? settingsRef.current.noiseSuppression ?? true,
               autoGainControl: true,
-              channelCount: { ideal: 1 },
-              sampleRate: { ideal: 48000 },
             }
           : {
               echoCancellation: options?.echoCancellation ?? settingsRef.current.echoCancellation ?? true,
               noiseSuppression: options?.noiseSuppression ?? settingsRef.current.noiseSuppression ?? true,
               autoGainControl: true,
-              channelCount: { ideal: 1 },
-              sampleRate: { ideal: 48000 },
             };
 
         const videoConstraints: MediaTrackConstraints | boolean = options?.videoInputId
           ? {
               deviceId: { ideal: options.videoInputId },
-              width: { ideal: isMobileDevice ? 1280 : 1280 },
-              height: { ideal: isMobileDevice ? 720 : 720 },
+              facingMode: { ideal: chosenFacing },
+            }
+          : isMobileDevice
+          ? {
               facingMode: { ideal: chosenFacing },
             }
           : {
@@ -122,7 +149,7 @@ export function useMediaDevices() {
             video: videoConstraints,
           });
         } catch (mediaErr: unknown) {
-          console.warn('[useMediaDevices] Full constraints failed, attempting fallback:', mediaErr);
+          console.warn('[useMediaDevices] Primary constraints failed, attempting fallback:', mediaErr);
 
           // 2. Try generic audio + facingMode video
           try {
@@ -131,20 +158,26 @@ export function useMediaDevices() {
               video: { facingMode: { ideal: chosenFacing } },
             });
           } catch {
-            // 3. Try audio only if video failed (e.g. no camera or webcam busy)
+            // 3. Try standard audio: true, video: true
             try {
               stream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-                video: false,
+                audio: true,
+                video: true,
               });
             } catch {
-              // 4. Try basic audio true
+              // 4. Try audio only if video failed (e.g. camera occupied)
               try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                stream = await navigator.mediaDevices.getUserMedia({
+                  audio: true,
+                  video: false,
+                });
               } catch {
-                // 5. Try video only if microphone is unavailable/disabled on OS
+                // 5. Try video only if microphone is unavailable/blocked
                 try {
-                  stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+                  stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: true,
+                  });
                 } catch {
                   throw mediaErr;
                 }
@@ -171,6 +204,7 @@ export function useMediaDevices() {
         setIsVideoMuted(videoMuted);
 
         setLocalStream(stream);
+        localStreamRef.current = stream;
         setPermissionGranted(true);
         await refreshDevices();
         return stream;
@@ -414,15 +448,18 @@ export function useMediaDevices() {
 
     // If stream has no active live video track, request camera again
     try {
+      const videoConstraints: MediaTrackConstraints | boolean = settingsRef.current.videoInputId
+        ? { deviceId: { ideal: settingsRef.current.videoInputId } }
+        : isMobileDevice
+        ? { facingMode: { ideal: facingModeRef.current || 'user' } }
+        : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: facingModeRef.current || 'user' } };
+
       const newVideoStream = await navigator.mediaDevices.getUserMedia({
-        video: settingsRef.current.videoInputId
-          ? {
-              deviceId: { ideal: settingsRef.current.videoInputId },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              facingMode: 'user',
-            }
-          : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        video: videoConstraints,
+      }).catch(async () => {
+        return await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
       });
       const newTrack = newVideoStream.getVideoTracks()[0];
       if (newTrack) {

@@ -26,6 +26,7 @@ export default function App() {
   const [waitingUsers, setWaitingUsers] = useState<WaitingUser[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
 
   // Apply dark mode class to root HTML
   useEffect(() => {
@@ -126,9 +127,15 @@ export default function App() {
     startAudioMuted: boolean;
     startVideoMuted: boolean;
     avatarColor: string;
+    meetingTitle?: string;
+    stream?: MediaStream | null;
   }) => {
     const socket = getSocket();
     const userId = `user_${Math.random().toString(36).substring(2, 9)}`;
+
+    if (options.stream) {
+      setActiveStream(options.stream);
+    }
 
     setSelfUser({
       socketId: socket.id || '',
@@ -145,11 +152,13 @@ export default function App() {
 
     socket.emit('room:create', {
       roomId: options.roomId,
-      roomName: `Reunião ${options.roomId}`,
+      roomName: options.meetingTitle || `Reunião ${options.roomId}`,
       user: {
         id: userId,
         name: options.userName,
         avatarColor: options.avatarColor,
+        audioMuted: options.startAudioMuted,
+        videoMuted: options.startVideoMuted,
       },
       isPrivate: options.isPrivate,
     });
@@ -161,9 +170,14 @@ export default function App() {
     startAudioMuted: boolean;
     startVideoMuted: boolean;
     avatarColor: string;
+    stream?: MediaStream | null;
   }) => {
     const socket = getSocket();
     const userId = `user_${Math.random().toString(36).substring(2, 9)}`;
+
+    if (options.stream) {
+      setActiveStream(options.stream);
+    }
 
     setSelfUser({
       socketId: socket.id || '',
@@ -194,6 +208,7 @@ export default function App() {
     const socket = getSocket();
     socket.emit('room:leave');
     setCurrentRoom(null);
+    setActiveStream(null);
     setViewState('home');
 
     // Clean URL param

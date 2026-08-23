@@ -40,6 +40,7 @@ interface HomeViewProps {
     startVideoMuted: boolean;
     avatarColor: string;
     meetingTitle?: string;
+    stream?: MediaStream | null;
   }) => void;
   onJoinMeeting: (options: {
     roomId: string;
@@ -47,6 +48,7 @@ interface HomeViewProps {
     startAudioMuted: boolean;
     startVideoMuted: boolean;
     avatarColor: string;
+    stream?: MediaStream | null;
   }) => void;
   initialRoomCode?: string;
 }
@@ -117,36 +119,41 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartMeeting, onJoinMeetin
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
             facingMode: { ideal: facing },
           },
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            channelCount: { ideal: 1 },
           },
         });
       } catch {
-        // If combined fails, try generic audio
+        // If combined fails, try generic audio + video
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-            video: false,
+            audio: true,
+            video: true,
           });
-          setPreviewCamMuted(true);
         } catch {
-          // Try video only if mic is blocked on mobile OS
+          // Try audio only
           try {
             stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: { ideal: facing } },
-              audio: false,
+              audio: true,
+              video: false,
             });
-            setPreviewMicMuted(true);
-          } catch (bothErr) {
-            console.warn('[HomeView] Could not load media preview:', bothErr);
-            setMediaError('Câmera ou microfone não detectados ou bloqueados.');
+            setPreviewCamMuted(true);
+          } catch {
+            // Try video only
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false,
+              });
+              setPreviewMicMuted(true);
+            } catch (bothErr) {
+              console.warn('[HomeView] Could not load media preview:', bothErr);
+              setMediaError('Câmera ou microfone não detectados ou bloqueados.');
+            }
           }
         }
       }
@@ -165,12 +172,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartMeeting, onJoinMeetin
 
   useEffect(() => {
     startPreview('user');
-
-    return () => {
-      if (previewStream) {
-        previewStream.getTracks().forEach((track) => track.stop());
-      }
-    };
   }, []);
 
   // Attach stream to video tag whenever stream changes
@@ -241,11 +242,6 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartMeeting, onJoinMeetin
       description: customMeetingDescription || '',
     });
 
-    // Stop preview stream before moving into room
-    if (previewStream) {
-      previewStream.getTracks().forEach((t) => t.stop());
-    }
-
     onStartMeeting({
       roomId: code,
       userName: effectiveHost,
@@ -254,6 +250,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartMeeting, onJoinMeetin
       startVideoMuted: previewCamMuted,
       avatarColor,
       meetingTitle: effectiveTitle,
+      stream: previewStream,
     });
   };
 
@@ -278,16 +275,13 @@ export const HomeView: React.FC<HomeViewProps> = ({ onStartMeeting, onJoinMeetin
     const target = parseMeetingCode(codeToJoin || roomCodeInput);
     if (!target) return;
 
-    if (previewStream) {
-      previewStream.getTracks().forEach((t) => t.stop());
-    }
-
     onJoinMeeting({
       roomId: target,
       userName: userName.trim() || 'Participante',
       startAudioMuted: previewMicMuted,
       startVideoMuted: previewCamMuted,
       avatarColor,
+      stream: previewStream,
     });
   };
 
