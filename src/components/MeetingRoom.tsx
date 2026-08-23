@@ -170,9 +170,12 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
       if (stream) {
         rtc.setLocalStream(stream);
       }
-      // Initiate WebRTC mesh connections to existing participants
+      // Initiate WebRTC mesh connections to existing participants.
+      // Glare prevention: só quem tem o menor socketId inicia a oferta.
+      // O outro lado espera passivamente a oferta chegar (evita corrida
+      // de ofertas simultâneas, que trava a conexão sem erro visível).
       participants.forEach((p) => {
-        if (p.socketId !== selfParticipant.socketId) {
+        if (p.socketId !== selfParticipant.socketId && selfParticipant.socketId < p.socketId) {
           rtc.initiateCall(p.socketId);
         }
       });
@@ -204,8 +207,8 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
 
       setMessages((prev) => [...prev, data.systemMessage]);
 
-      // Initiate WebRTC call to newcomer
-      if (webrtcManagerRef.current) {
+      // Initiate WebRTC call to newcomer — mesma regra de desempate
+      if (webrtcManagerRef.current && selfParticipant.socketId < data.participant.socketId) {
         webrtcManagerRef.current.initiateCall(data.participant.socketId);
       }
     };
