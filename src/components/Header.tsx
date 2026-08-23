@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Video, Moon, Sun, HelpCircle, Maximize, Minimize } from 'lucide-react';
+import { Video, Moon, Sun, HelpCircle, Maximize, Minimize, Download, CheckCircle2 } from 'lucide-react';
+import { usePWA } from '../hooks/usePWA';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -11,6 +12,7 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, onToggleDarkMode, onOp
   const [time, setTime] = useState<string>('');
   const [date, setDate] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const { isInstallable, isInstalled, isIOS, promptInstall, setShowIOSPrompt } = usePWA();
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -58,8 +60,16 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, onToggleDarkMode, onOp
     return () => clearInterval(interval);
   }, []);
 
+  const handleInstallClick = () => {
+    if (isIOS && !isInstalled) {
+      setShowIOSPrompt(true);
+    } else {
+      promptInstall();
+    }
+  };
+
   return (
-    <header id="main-header" className="w-full h-14 px-6 flex items-center justify-between border-b border-white/5 bg-[#0A0A0A] transition-colors">
+    <header id="main-header" className="w-full h-14 px-4 sm:px-6 flex items-center justify-between border-b border-white/5 bg-[#0A0A0A] transition-colors">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-600/20">
           <Video className="w-4 h-4" />
@@ -73,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, onToggleDarkMode, onOp
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Date & Time */}
         <div className="hidden md:flex items-center gap-2 text-sm text-gray-400 font-medium">
           <span className="text-gray-200">{time}</span>
@@ -83,6 +93,29 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, onToggleDarkMode, onOp
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
+          {/* PWA Install Button */}
+          {(!isInstalled && (isInstallable || isIOS)) && (
+            <button
+              id="header-install-pwa-btn"
+              onClick={handleInstallClick}
+              title="Instalar MeetPulse no dispositivo (PWA)"
+              className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 hover:text-blue-300 border border-blue-500/30 transition-all flex items-center gap-1.5 text-xs font-semibold shadow-sm active:scale-95"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Instalar App</span>
+            </button>
+          )}
+
+          {isInstalled && (
+            <div
+              title="Aplicativo PWA Instalado"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>App Instalado</span>
+            </div>
+          )}
+
           {/* Fullscreen Button */}
           <button
             id="header-fullscreen-btn"
@@ -122,3 +155,4 @@ export const Header: React.FC<HeaderProps> = ({ darkMode, onToggleDarkMode, onOp
     </header>
   );
 };
+

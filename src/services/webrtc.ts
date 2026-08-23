@@ -30,22 +30,33 @@ export class WebRTCManager {
   public setLocalStream(stream: MediaStream | null) {
     this.localStream = stream;
 
+    if (!this.localStream) return;
+
     // Update existing peer connections with the new stream tracks
-    if (this.localStream) {
-      this.peers.forEach((peer) => {
-        const senders = peer.peerConnection.getSenders();
-        this.localStream?.getTracks().forEach((track) => {
-          const sender = senders.find((s) => s.track && s.track.kind === track.kind);
-          if (sender) {
-            sender.replaceTrack(track).catch((err) => {
-              console.warn('[WebRTC] Error replacing track:', err);
+    this.peers.forEach((peer) => {
+      const senders = peer.peerConnection.getSenders();
+      this.localStream?.getTracks().forEach((track) => {
+        const sender = senders.find((s) => (s.track ? s.track.kind === track.kind : false));
+        if (sender) {
+          sender.replaceTrack(track).catch((err) => {
+            console.warn('[WebRTC] Error replacing track:', err);
+          });
+        } else {
+          const emptySender = senders.find((s) => !s.track);
+          if (emptySender) {
+            emptySender.replaceTrack(track).catch((err) => {
+              console.warn('[WebRTC] Error replacing track on empty sender:', err);
             });
           } else {
-            peer.peerConnection.addTrack(track, this.localStream!);
+            try {
+              peer.peerConnection.addTrack(track, this.localStream!);
+            } catch (err) {
+              console.warn('[WebRTC] Error adding track:', err);
+            }
           }
-        });
+        }
       });
-    }
+    });
   }
 
   public onRemoteStream(callback: (socketId: string, stream: MediaStream) => void) {
@@ -175,14 +186,20 @@ export class WebRTCManager {
 
     // Handle Incoming remote tracks
     pc.ontrack = (event) => {
-      event.streams[0].getTracks().forEach((track) => {
-        if (!remoteStream.getTracks().some((t) => t.id === track.id)) {
-          remoteStream.addTrack(track);
+      if (event.streams && event.streams[0]) {
+        event.streams[0].getTracks().forEach((track) => {
+          if (!remoteStream.getTracks().some((t) => t.id === track.id)) {
+            remoteStream.addTrack(track);
+          }
+        });
+      } else if (event.track) {
+        if (!remoteStream.getTracks().some((t) => t.id === event.track.id)) {
+          remoteStream.addTrack(event.track);
         }
-      });
+      }
 
       if (this.onRemoteStreamCallback) {
-        this.onRemoteStreamCallback(targetSocketId, remoteStream);
+        this.onRemoteStreamCallback(targetSocketId, new MediaStream(remoteStream.getTracks()));
       }
     };
 

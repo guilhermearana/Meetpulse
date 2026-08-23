@@ -4,6 +4,7 @@ import {
   MicOff,
   Video,
   VideoOff,
+  SwitchCamera,
   Monitor,
   MonitorOff,
   Hand,
@@ -36,6 +37,7 @@ interface MeetingControlsProps {
   currentVideoId: string;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
+  onFlipCamera?: () => void;
   onToggleScreenShare: () => void;
   onToggleHand: () => void;
   onSendReaction: (emoji: string) => void;
@@ -69,6 +71,7 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
   currentVideoId,
   onToggleAudio,
   onToggleVideo,
+  onFlipCamera,
   onToggleScreenShare,
   onToggleHand,
   onSendReaction,
@@ -183,8 +186,8 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
           )}
         </div>
 
-        {/* Camera Button + Device Selector */}
-        <div className="relative flex items-center" ref={videoMenuRef}>
+        {/* Camera Button + Device Selector + Flip Camera */}
+        <div className="relative flex items-center gap-1" ref={videoMenuRef}>
           <button
             id="toggle-cam-btn"
             onClick={onToggleVideo}
@@ -198,6 +201,18 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
             {isVideoMuted ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
           </button>
 
+          {/* Quick flip camera button (mobile/tablet/multi-cam) */}
+          {onFlipCamera && !isVideoMuted && (
+            <button
+              id="flip-camera-quick-btn"
+              onClick={onFlipCamera}
+              title="Inverter câmera (Frontal / Traseira)"
+              className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 transition-all shadow-md active:scale-95 flex items-center justify-center"
+            >
+              <SwitchCamera className="w-5 h-5 text-blue-400" />
+            </button>
+          )}
+
           {videoDevices.length > 1 && (
             <button
               onClick={() => setShowVideoMenu(!showVideoMenu)}
@@ -209,8 +224,22 @@ export const MeetingControls: React.FC<MeetingControlsProps> = ({
           )}
 
           {showVideoMenu && (
-            <div className="absolute bottom-full mb-3 left-0 w-64 bg-[#0A0A0A] border border-white/10 rounded-2xl p-2 shadow-2xl z-50 text-left">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3 py-1.5">Câmera</div>
+            <div className="absolute bottom-full mb-3 left-0 w-64 bg-[#0A0A0A] border border-white/10 rounded-2xl p-2 shadow-2xl z-50 text-left space-y-1">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-3 py-1.5 flex items-center justify-between">
+                <span>Câmera</span>
+                {onFlipCamera && (
+                  <button
+                    onClick={() => {
+                      onFlipCamera();
+                      setShowVideoMenu(false);
+                    }}
+                    className="text-blue-400 hover:text-blue-300 font-semibold normal-case text-xs flex items-center gap-1"
+                  >
+                    <SwitchCamera className="w-3.5 h-3.5" />
+                    <span>Inverter</span>
+                  </button>
+                )}
+              </div>
               {videoDevices.map((d) => (
                 <button
                   key={d.deviceId}

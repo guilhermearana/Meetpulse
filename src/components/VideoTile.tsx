@@ -37,6 +37,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [volume, setVolume] = useState<number>(1);
   const [isTileMuted, setIsTileMuted] = useState<boolean>(false);
   const [showMenu, setShowMenu] = useState<boolean>(false);
@@ -65,21 +66,39 @@ export const VideoTile: React.FC<VideoTileProps> = ({
     }
   };
 
-  // Set stream to video element
+  // Set stream to video & audio elements with autoplay error handling
   useEffect(() => {
     if (videoRef.current) {
       if (stream) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {
+          // Autoplay policy might need user interaction
+        });
       } else {
         videoRef.current.srcObject = null;
       }
     }
-  }, [stream]);
+
+    if (audioRef.current && !isSelf) {
+      if (stream) {
+        audioRef.current.srcObject = stream;
+        audioRef.current.play().catch(() => {});
+      } else {
+        audioRef.current.srcObject = null;
+      }
+    }
+  }, [stream, isSelf]);
 
   // Adjust volume on remote stream
   useEffect(() => {
+    const targetVol = isTileMuted ? 0 : volume;
     if (videoRef.current && !isSelf) {
-      videoRef.current.volume = isTileMuted ? 0 : volume;
+      videoRef.current.volume = targetVol;
+      videoRef.current.muted = isTileMuted;
+    }
+    if (audioRef.current && !isSelf) {
+      audioRef.current.volume = targetVol;
+      audioRef.current.muted = isTileMuted;
     }
   }, [volume, isTileMuted, isSelf]);
 
@@ -121,6 +140,16 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           isSelf && !participant.isScreenSharing ? '-scale-x-100' : ''
         } ${hasVideo ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       />
+
+      {/* Backup dedicated audio element for remote stream */}
+      {!isSelf && (
+        <audio
+          ref={audioRef}
+          autoPlay
+          playsInline
+          className="hidden"
+        />
+      )}
 
       {/* Avatar Fallback when camera is OFF */}
       {!hasVideo && (

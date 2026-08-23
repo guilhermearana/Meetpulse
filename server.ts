@@ -613,6 +613,13 @@ async function startServer() {
     socket.on('disconnect', handleLeave);
   });
 
+  // Set Service-Worker headers
+  app.get('/sw.js', (req, res, next) => {
+    res.setHeader('Service-Worker-Allowed', '/');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    next();
+  });
+
   // Vite middleware in dev or static files in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

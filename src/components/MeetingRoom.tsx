@@ -26,6 +26,7 @@ import { WebRTCManager } from '../services/webrtc';
 import { useMediaDevices } from '../hooks/useMediaDevices';
 import { useAudioVisualizer } from '../hooks/useAudioVisualizer';
 import { formatCallDuration, copyToClipboard } from '../utils/helpers';
+import { recordMeetingHistory, updateMeetingInFirestore } from '../services/firebase';
 import { VideoGrid } from './VideoGrid';
 import { MeetingControls } from './MeetingControls';
 import { ChatDrawer } from './ChatDrawer';
@@ -83,9 +84,14 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
     isAudioMuted,
     isVideoMuted,
     isScreenSharing,
+    facingMode,
+    isMobileDevice,
     settings,
     setSettings,
     startUserMedia,
+    switchAudioDevice,
+    switchVideoDevice,
+    flipCamera,
     toggleAudio,
     toggleVideo,
     startScreenShare,
@@ -96,6 +102,23 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const webrtcManagerRef = useRef<WebRTCManager | null>(null);
   const activeStream = isScreenSharing && screenStream ? screenStream : localStream;
+
+  // Record meeting participation in Firebase Firestore
+  useEffect(() => {
+    recordMeetingHistory({
+      roomId: room.id,
+      userName: selfUser.name,
+      role: selfUser.isHost ? 'host' : 'participant',
+      device: isMobileDevice ? 'mobile' : 'desktop',
+    });
+
+    if (selfUser.isHost) {
+      updateMeetingInFirestore(room.id, {
+        status: 'active',
+        participantCount: participants.length,
+      });
+    }
+  }, [room.id, selfUser.name, selfUser.isHost, isMobileDevice]);
 
   // Audio level meter on local stream
   useAudioVisualizer(localStream, isAudioMuted, (volume, isSpeaking) => {
@@ -328,8 +351,8 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
   }, [isAudioMuted, isChatOpen, onLeave, pinnedSocketId, room.id, toggleAudio]);
 
   // Audio / Video / Hand toggles
-  const handleToggleAudio = () => {
-    const nextMuted = toggleAudio();
+  const handleToggleAudio = async () => {
+    const nextMuted = await toggleAudio();
     setSelfParticipant((prev) => ({ ...prev, audioMuted: nextMuted }));
     const socket = getSocket();
     socket.emit('user:update_media', {
@@ -338,8 +361,8 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
     });
   };
 
-  const handleToggleVideo = () => {
-    const nextMuted = toggleVideo();
+  const handleToggleVideo = async () => {
+    const nextMuted = await toggleVideo();
     setSelfParticipant((prev) => ({ ...prev, videoMuted: nextMuted }));
     const socket = getSocket();
     socket.emit('user:update_media', {
@@ -492,15 +515,26 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
     }
   };
 
-  const handleSelectAudioDevice = (deviceId: string) => {
-    setSettings((prev) => ({ ...prev, audioInputId: deviceId }));
-    startUserMedia({ audioInputId: deviceId, startAudioMuted: isAudioMuted, startVideoMuted: isVideoMuted });
+  const handleSelectAudioDevice = async (deviceId: string) => {
+    const updated = await switchAudioDevice(deviceId);
+    if (updated && webrtcManagerRef.current) {
+      webrtcManagerRef.current.setLocalStream(updated);
+    }
   };
 
-  const handleSelectVideoDevice = (deviceId: string) => {
-    setSettings((prev) => ({ ...prev, videoInputId: deviceId }));
-    startUserMedia({ videoInputId: deviceId, startAudioMuted: isAudioMuted, startVideoMuted: isVideoMuted });
+  const handleSelectVideoDevice = async (deviceId: string) => {
+    const updated = await switchVideoDevice(deviceId);
+    if (updated && webrtcManagerRef.current) {
+      webrtcManagerRef.current.setLocalStream(updated);
+    }
   };
+
+  const handleFlipCamera = useCallback(async () => {
+    const updated = await flipCamera();
+    if (updated && webrtcManagerRef.current) {
+      webrtcManagerRef.current.setLocalStream(updated);
+    }
+  }, [flipCamera]);
 
   return (
     <div id="meeting-room-wrapper" className="fixed inset-0 w-full h-full bg-[#050505] flex flex-col overflow-hidden select-none">
@@ -672,6 +706,7 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
         currentVideoId={settings.videoInputId}
         onToggleAudio={handleToggleAudio}
         onToggleVideo={handleToggleVideo}
+        onFlipCamera={handleFlipCamera}
         onToggleScreenShare={handleToggleScreenShare}
         onToggleHand={handleToggleHand}
         onSendReaction={handleSendReaction}
@@ -719,7 +754,21 @@ export const MeetingRoom: React.FC<MeetingRoomProps> = ({
           audioDevices={audioDevices}
           videoDevices={videoDevices}
           audioOutputDevices={audioOutputDevices}
-          onUpdateSettings={(newSettings) => setSettings((prev) => ({ ...prev, ...newSettings }))}
+          onUpdateSettings={async (newSettings) => {
+            setSettings((prev) => ({ ...prev, ...newSettings }));
+            if (newSettings.audioInputId !== undefined && newSettings.audioInputId !== settings.audioInputId) {
+              const updated = await switchAudioDevice(newSettings.audioInputId);
+              if (updated && webrtcManagerRef.current) {
+                webrtcManagerRef.current.setLocalStream(updated);
+              }
+            }
+            if (newSettings.videoInputId !== undefined && newSettings.videoInputId !== settings.videoInputId) {
+              const updated = await switchVideoDevice(newSettings.videoInputId);
+              if (updated && webrtcManagerRef.current) {
+                webrtcManagerRef.current.setLocalStream(updated);
+              }
+            }
+          }}
           onClose={() => setShowSettingsModal(false)}
         />
       )}

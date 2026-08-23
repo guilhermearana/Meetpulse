@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Send, X, Smile, MessageSquare, Shield, Sparkles } from 'lucide-react';
 import { ChatMessage } from '../types';
 
@@ -40,9 +41,13 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
   };
 
   return (
-    <aside
+    <motion.aside
       id="chat-drawer"
-      className="w-full sm:w-80 md:w-96 h-full bg-[#0A0A0A] border-l border-white/5 flex flex-col z-30 shadow-2xl transition-all duration-200"
+      initial={{ x: '100%', opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: '100%', opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+      className="w-full sm:w-80 md:w-96 h-full bg-[#0A0A0A] border-l border-white/5 flex flex-col z-30 shadow-2xl"
     >
       {/* Drawer Header */}
       <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
@@ -74,43 +79,54 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
             <p className="text-[11px] text-gray-600 mt-1">Diga um "Olá" para começar!</p>
           </div>
         ) : (
-          messages.map((msg) => {
-            if (msg.type === 'system') {
+          <AnimatePresence initial={false}>
+            {messages.map((msg) => {
+              if (msg.type === 'system') {
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-center py-1"
+                  >
+                    <span className="inline-block px-3 py-1 rounded-full bg-white/5 text-gray-400 text-[11px] font-medium border border-white/10">
+                      {msg.text}
+                    </span>
+                  </motion.div>
+                );
+              }
+
+              const isMe = msg.senderId === currentUserId;
+
               return (
-                <div key={msg.id} className="text-center py-1">
-                  <span className="inline-block px-3 py-1 rounded-full bg-white/5 text-gray-400 text-[11px] font-medium border border-white/10">
-                    {msg.text}
-                  </span>
-                </div>
-              );
-            }
-
-            const isMe = msg.senderId === currentUserId;
-
-            return (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-semibold text-gray-300">
-                    {isMe ? 'Você' : msg.senderName}
-                  </span>
-                  <span className="text-[10px] text-gray-500 font-mono">{msg.time}</span>
-                </div>
-
-                <div
-                  className={`px-3.5 py-2.5 rounded-2xl max-w-[88%] text-sm break-words shadow-sm ${
-                    isMe
-                      ? 'bg-blue-600 text-white rounded-tr-none shadow-blue-600/20'
-                      : 'bg-[#121212] text-gray-100 rounded-tl-none border border-white/10'
-                  }`}
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                 >
-                  {msg.text}
-                </div>
-              </div>
-            );
-          })
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-semibold text-gray-300">
+                      {isMe ? 'Você' : msg.senderName}
+                    </span>
+                    <span className="text-[10px] text-gray-500 font-mono">{msg.time}</span>
+                  </div>
+
+                  <div
+                    className={`px-3.5 py-2.5 rounded-2xl max-w-[88%] text-sm break-words shadow-sm ${
+                      isMe
+                        ? 'bg-blue-600 text-white rounded-tr-none shadow-blue-600/20'
+                        : 'bg-[#121212] text-gray-100 rounded-tl-none border border-white/10'
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -152,6 +168,6 @@ export const ChatDrawer: React.FC<ChatDrawerProps> = ({
           <Send className="w-4 h-4" />
         </button>
       </form>
-    </aside>
+    </motion.aside>
   );
 };

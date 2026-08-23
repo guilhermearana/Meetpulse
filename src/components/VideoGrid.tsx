@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Participant, LayoutMode } from '../types';
 import { VideoTile } from './VideoTile';
 
@@ -45,7 +46,15 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
     return (
       <div id="video-grid-spotlight" className="w-full h-full p-2 sm:p-4 flex flex-col lg:flex-row gap-3 overflow-hidden">
         {/* Main Stage (Large) */}
-        <div className="flex-1 h-full min-h-[300px] rounded-2xl overflow-hidden shadow-2xl relative">
+        <motion.div
+          layout
+          key={spotlightParticipant.socketId}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="flex-1 h-full min-h-[300px] rounded-2xl overflow-hidden shadow-2xl relative"
+        >
           <VideoTile
             participant={spotlightParticipant}
             stream={getStreamFor(spotlightParticipant.socketId)}
@@ -55,24 +64,34 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
             onTogglePin={onTogglePin}
             onKickParticipant={onKickParticipant}
           />
-        </div>
+        </motion.div>
 
         {/* Secondary Strip (Side or Bottom on Mobile) */}
         {secondaryParticipants.length > 0 && (
           <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-y-auto lg:w-64 xl:w-72 shrink-0 py-1 lg:py-0">
-            {secondaryParticipants.map((p) => (
-              <div key={p.socketId} className="w-44 h-32 lg:w-full lg:h-44 shrink-0">
-                <VideoTile
-                  participant={p}
-                  stream={getStreamFor(p.socketId)}
-                  isSelf={p.socketId === selfParticipant.socketId}
-                  isPinned={false}
-                  isHost={isHost}
-                  onTogglePin={onTogglePin}
-                  onKickParticipant={onKickParticipant}
-                />
-              </div>
-            ))}
+            <AnimatePresence mode="popLayout">
+              {secondaryParticipants.map((p) => (
+                <motion.div
+                  layout
+                  key={p.socketId}
+                  initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.7, x: 20, transition: { duration: 0.2 } }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                  className="w-44 h-32 lg:w-full lg:h-44 shrink-0 rounded-2xl overflow-hidden"
+                >
+                  <VideoTile
+                    participant={p}
+                    stream={getStreamFor(p.socketId)}
+                    isSelf={p.socketId === selfParticipant.socketId}
+                    isPinned={false}
+                    isHost={isHost}
+                    onTogglePin={onTogglePin}
+                    onKickParticipant={onKickParticipant}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -98,24 +117,38 @@ export const VideoGrid: React.FC<VideoGridProps> = ({
       id="video-grid-container"
       className={`w-full h-full p-2 sm:p-4 grid ${gridColsClass} gap-3 auto-rows-fr overflow-y-auto`}
     >
-      {allParticipants.map((p) => {
-        const isSelf = p.socketId === selfParticipant.socketId;
-        const stream = isSelf ? localStream : remoteStreams.get(p.socketId) || null;
+      <AnimatePresence mode="popLayout">
+        {allParticipants.map((p, index) => {
+          const isSelf = p.socketId === selfParticipant.socketId;
+          const stream = isSelf ? localStream : remoteStreams.get(p.socketId) || null;
 
-        return (
-          <div key={p.socketId} className="w-full h-full min-h-[220px] max-h-[85vh]">
-            <VideoTile
-              participant={p}
-              stream={stream}
-              isSelf={isSelf}
-              isPinned={false}
-              isHost={isHost}
-              onTogglePin={onTogglePin}
-              onKickParticipant={onKickParticipant}
-            />
-          </div>
-        );
-      })}
+          return (
+            <motion.div
+              layout
+              key={p.socketId}
+              initial={{ opacity: 0, scale: 0.85, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+              transition={{
+                layout: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+                opacity: { duration: 0.25 },
+                scale: { type: 'spring', stiffness: 350, damping: 25 },
+              }}
+              className="w-full h-full min-h-[220px] max-h-[85vh] rounded-2xl overflow-hidden"
+            >
+              <VideoTile
+                participant={p}
+                stream={stream}
+                isSelf={isSelf}
+                isPinned={false}
+                isHost={isHost}
+                onTogglePin={onTogglePin}
+                onKickParticipant={onKickParticipant}
+              />
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 };

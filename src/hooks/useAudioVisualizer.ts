@@ -25,6 +25,7 @@ export function useAudioVisualizer(
     if (audioTracks.length === 0 || !audioTracks[0].enabled) {
       setVolume(0);
       setIsSpeaking(false);
+      if (onSpeakingChange) onSpeakingChange(0, false);
       return;
     }
 
@@ -32,8 +33,25 @@ export function useAudioVisualizer(
 
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+
       const ctx = new AudioCtx();
       audioContextRef.current = ctx;
+
+      // Resume AudioContext if browser initially placed it in suspended state
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+
+      // Unlock on user interaction if needed
+      const unlockAudio = () => {
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener('click', unlockAudio, { once: true });
+      window.addEventListener('keydown', unlockAudio, { once: true });
+      window.addEventListener('touchstart', unlockAudio, { once: true });
 
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -50,6 +68,10 @@ export function useAudioVisualizer(
       const checkAudioLevel = () => {
         if (!isSubscribed) return;
 
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+
         analyser.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) {
@@ -59,7 +81,7 @@ export function useAudioVisualizer(
         const normalized = Math.min(100, Math.round((average / 128) * 100));
 
         setVolume(normalized);
-        const speaking = normalized > 12;
+        const speaking = normalized > 10;
         setIsSpeaking(speaking);
 
         const now = Date.now();

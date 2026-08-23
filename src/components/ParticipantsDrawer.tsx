@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Users,
   X,
@@ -62,9 +63,13 @@ export const ParticipantsDrawer: React.FC<ParticipantsDrawerProps> = ({
   };
 
   return (
-    <aside
+    <motion.aside
       id="participants-drawer"
-      className="w-full sm:w-80 md:w-96 h-full bg-[#0A0A0A] border-l border-white/5 flex flex-col z-30 shadow-2xl transition-all duration-200"
+      initial={{ x: '100%', opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: '100%', opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+      className="w-full sm:w-80 md:w-96 h-full bg-[#0A0A0A] border-l border-white/5 flex flex-col z-30 shadow-2xl"
     >
       {/* Drawer Header */}
       <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
@@ -172,101 +177,107 @@ export const ParticipantsDrawer: React.FC<ParticipantsDrawerProps> = ({
 
       {/* Participants List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        {filteredParticipants.map((p) => {
-          const isSelf = p.socketId === selfSocketId;
-          const isSpeaking = !p.audioMuted && (p.volumeLevel || 0) > 12;
+        <AnimatePresence>
+          {filteredParticipants.map((p) => {
+            const isSelf = p.socketId === selfSocketId;
+            const isSpeaking = !p.audioMuted && (p.volumeLevel || 0) > 12;
 
-          return (
-            <div
-              key={p.socketId}
-              className="p-2.5 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between gap-3 group"
-            >
-              {/* Avatar & Name */}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 relative shadow-sm"
-                  style={{ backgroundColor: p.avatarColor || '#3B82F6' }}
-                >
-                  {getInitials(p.name)}
-                  {isSpeaking && (
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#0A0A0A] animate-ping" />
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-gray-200 truncate">
-                      {p.name}
-                    </span>
-                    {isSelf && (
-                      <span className="text-[10px] text-gray-400 font-normal shrink-0">(Você)</span>
-                    )}
-                    {p.isHost && (
-                      <span
-                        title="Organizador da reunião"
-                        className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-bold shrink-0 flex items-center gap-0.5"
-                      >
-                        <Shield className="w-2.5 h-2.5" />
-                        Host
-                      </span>
+            return (
+              <motion.div
+                key={p.socketId}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                transition={{ duration: 0.2 }}
+                className="p-2.5 rounded-xl hover:bg-white/5 transition-colors flex items-center justify-between gap-3 group"
+              >
+                {/* Avatar & Name */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 relative shadow-sm"
+                    style={{ backgroundColor: p.avatarColor || '#3B82F6' }}
+                  >
+                    {getInitials(p.name)}
+                    {isSpeaking && (
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-[#0A0A0A] animate-ping" />
                     )}
                   </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-gray-200 truncate">
+                        {p.name}
+                      </span>
+                      {isSelf && (
+                        <span className="text-[10px] text-gray-400 font-normal shrink-0">(Você)</span>
+                      )}
+                      {p.isHost && (
+                        <span
+                          title="Organizador da reunião"
+                          className="px-1.5 py-0.5 rounded bg-blue-600/20 border border-blue-500/30 text-blue-400 text-[9px] font-bold shrink-0 flex items-center gap-0.5"
+                        >
+                          <Shield className="w-2.5 h-2.5" />
+                          Host
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Status Icons */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Screen Share */}
-                {p.isScreenSharing && (
-                  <span title="Compartilhando tela" className="text-blue-400">
-                    <Monitor className="w-4 h-4" />
-                  </span>
-                )}
+                {/* Status Icons */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* Screen Share */}
+                  {p.isScreenSharing && (
+                    <span title="Compartilhando tela" className="text-blue-400">
+                      <Monitor className="w-4 h-4" />
+                    </span>
+                  )}
 
-                {/* Hand Raised */}
-                {p.isHandRaised && (
-                  <span title="Mão levantada" className="text-amber-400 text-sm animate-bounce">
-                    ✋
-                  </span>
-                )}
+                  {/* Hand Raised */}
+                  {p.isHandRaised && (
+                    <span title="Mão levantada" className="text-amber-400 text-sm animate-bounce">
+                      ✋
+                    </span>
+                  )}
 
-                {/* Mic Status */}
-                {p.audioMuted ? (
-                  <span title="Microfone desligado" className="text-red-400">
-                    <MicOff className="w-4 h-4" />
-                  </span>
-                ) : (
-                  <span title="Microfone ligado" className={isSpeaking ? 'text-blue-400' : 'text-gray-400'}>
-                    <Mic className="w-4 h-4" />
-                  </span>
-                )}
+                  {/* Mic Status */}
+                  {p.audioMuted ? (
+                    <span title="Microfone desligado" className="text-red-400">
+                      <MicOff className="w-4 h-4" />
+                    </span>
+                  ) : (
+                    <span title="Microfone ligado" className={isSpeaking ? 'text-blue-400' : 'text-gray-400'}>
+                      <Mic className="w-4 h-4" />
+                    </span>
+                  )}
 
-                {/* Video Status */}
-                {p.videoMuted ? (
-                  <span title="Câmera desligada" className="text-red-400">
-                    <VideoOff className="w-4 h-4" />
-                  </span>
-                ) : (
-                  <span title="Câmera ligada" className="text-gray-400">
-                    <Video className="w-4 h-4" />
-                  </span>
-                )}
+                  {/* Video Status */}
+                  {p.videoMuted ? (
+                    <span title="Câmera desligada" className="text-red-400">
+                      <VideoOff className="w-4 h-4" />
+                    </span>
+                  ) : (
+                    <span title="Câmera ligada" className="text-gray-400">
+                      <Video className="w-4 h-4" />
+                    </span>
+                  )}
 
-                {/* Host Kick Option */}
-                {isHost && !isSelf && (
-                  <button
-                    onClick={() => onKickParticipant(p.socketId)}
-                    title="Remover participante"
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/50 text-gray-400 hover:text-red-400 rounded transition-opacity"
-                  >
-                    <UserX className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                  {/* Host Kick Option */}
+                  {isHost && !isSelf && (
+                    <button
+                      onClick={() => onKickParticipant(p.socketId)}
+                      title="Remover participante"
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/50 text-gray-400 hover:text-red-400 rounded transition-opacity"
+                    >
+                      <UserX className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
-    </aside>
+    </motion.aside>
   );
 };

@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Meeting": {
+      "title": "Meeting",
+      "description": "Information about created and active meetings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "hostName": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "status": { "type": "string" },
+        "isInstant": { "type": "boolean" },
+        "participantCount": { "type": "number" },
+        "lastActiveAt": { "type": "string" }
+      },
+      "required": ["roomId", "title", "hostName", "createdAt"]
+    },
+    "MeetingHistory": {
+      "title": "MeetingHistory",
+      "description": "History log of meetings created and participated",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomId": { "type": "string" },
+        "meetingTitle": { "type": "string" },
+        "userName": { "type": "string" },
+        "joinedAt": { "type": "string" },
+        "leftAt": { "type": "string" },
+        "durationSeconds": { "type": "number" }
+      },
+      "required": ["roomId", "userName", "joinedAt"]
+    }
+  },
+  "firestore": {
+    "/meetings/{meetingId}": {
+      "schema": "Meeting",
+      "description": "Created and stored meetings in MeetPulse"
+    },
+    "/meeting_history/{historyId}": {
+      "schema": "MeetingHistory",
+      "description": "User meeting session logs"
+    }
+  }
+}

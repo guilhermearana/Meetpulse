@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
 import { HomeView } from './components/HomeView';
 import { MeetingRoom } from './components/MeetingRoom';
 import { WaitingRoomOverlay } from './components/WaitingRoomOverlay';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { getSocket, disconnectSocket } from './services/socket';
 import { RoomInfo, Participant, ChatMessage, WaitingUser } from './types';
 import { parseMeetingCode } from './utils/helpers';
-import { AlertCircle, CheckCircle2, Shield, Info, HelpCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Shield, Info, HelpCircle, Smartphone } from 'lucide-react';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -224,40 +226,70 @@ export default function App() {
         </div>
       )}
 
-      {/* Screen Routing */}
-      {viewState === 'home' && (
-        <>
-          <Header
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkMode(!darkMode)}
-            onOpenHelp={() => setShowHelpModal(true)}
-          />
-          <HomeView
-            onStartMeeting={handleStartMeeting}
-            onJoinMeeting={handleJoinMeeting}
-            initialRoomCode={initialRoomCode}
-          />
-        </>
-      )}
+      {/* Screen Routing with Smooth Framer Motion transitions */}
+      <AnimatePresence mode="wait">
+        {viewState === 'home' && (
+          <motion.div
+            key="home-screen"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98, filter: 'blur(4px)' }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="flex-1 flex flex-col w-full"
+          >
+            <Header
+              darkMode={darkMode}
+              onToggleDarkMode={() => setDarkMode(!darkMode)}
+              onOpenHelp={() => setShowHelpModal(true)}
+            />
+            <HomeView
+              onStartMeeting={handleStartMeeting}
+              onJoinMeeting={handleJoinMeeting}
+              initialRoomCode={initialRoomCode}
+            />
+          </motion.div>
+        )}
 
-      {viewState === 'waiting_room' && selfUser && (
-        <WaitingRoomOverlay
-          meetingCode={initialRoomCode || (currentRoom ? currentRoom.id : '')}
-          userName={selfUser.name}
-          onCancel={handleLeaveMeeting}
-        />
-      )}
+        {viewState === 'waiting_room' && selfUser && (
+          <motion.div
+            key="waiting-room-screen"
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -15 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 w-full h-full"
+          >
+            <WaitingRoomOverlay
+              meetingCode={initialRoomCode || (currentRoom ? currentRoom.id : '')}
+              userName={selfUser.name}
+              onCancel={handleLeaveMeeting}
+            />
+          </motion.div>
+        )}
 
-      {viewState === 'in_meeting' && currentRoom && selfUser && (
-        <MeetingRoom
-          initialRoom={currentRoom}
-          selfUser={selfUser}
-          initialParticipants={participants}
-          initialMessages={messages}
-          initialWaitingUsers={waitingUsers}
-          onLeave={handleLeaveMeeting}
-        />
-      )}
+        {viewState === 'in_meeting' && currentRoom && selfUser && (
+          <motion.div
+            key="meeting-room-screen"
+            initial={{ opacity: 0, scale: 1.02 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.97, filter: 'blur(6px)' }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 w-full h-full"
+          >
+            <MeetingRoom
+              initialRoom={currentRoom}
+              selfUser={selfUser}
+              initialParticipants={participants}
+              initialMessages={messages}
+              initialWaitingUsers={waitingUsers}
+              onLeave={handleLeaveMeeting}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating PWA Install Banner */}
+      <PWAInstallBanner />
 
       {/* Help & Guide Modal */}
       {showHelpModal && (
@@ -285,6 +317,14 @@ export default function App() {
             </div>
 
             <div className="space-y-3 text-xs text-gray-300">
+              <div className="p-3 rounded-xl bg-[#121212] border border-white/5 space-y-1">
+                <div className="font-bold text-gray-100 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                  <span>📱 Aplicativo PWA (Celular & Computador)</span>
+                </div>
+                <div>Instale o MeetPulse no seu celular (Android/iOS) ou no computador clicando em "Instalar App" no topo para ter acesso rápido como um app nativo sem barras de navegador.</div>
+              </div>
+
               <div className="p-3 rounded-xl bg-[#121212] border border-white/5 space-y-1">
                 <div className="font-bold text-gray-100">📹 Como convidar pessoas?</div>
                 <div>Dentro da chamada, clique no botão "Convidar" no topo ou na barra de ferramentas para copiar o link direto ou enviar pelo WhatsApp.</div>
