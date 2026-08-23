@@ -202,6 +202,29 @@ export class WebRTCManager {
       }
     };
 
+    // Renegociação: dispara quando tracks são adicionadas/trocadas depois
+    // da negociação inicial (ex: mídia local ainda carregando quando a
+    // oferta/resposta original foi feita). Sem isso, tracks adicionadas
+    // tardiamente nunca chegam ao outro lado.
+    let negotiating = false;
+    pc.onnegotiationneeded = async () => {
+      try {
+        if (negotiating || pc.signalingState !== 'stable') return;
+        negotiating = true;
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        const socket = getSocket();
+        socket.emit('webrtc:offer', {
+          targetSocketId,
+          offer,
+        });
+      } catch (err) {
+        console.error('[WebRTC] Error during renegotiation:', err);
+      } finally {
+        negotiating = false;
+      }
+    };
+
     // Handle Incoming remote tracks
     pc.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
